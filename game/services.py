@@ -41,7 +41,7 @@ class MemoryGameService:
         if not state["memory_event_active"] or state["memory_game_over"]:
             return {"status": "inactive"}
 
-        if index is None or not (0 <= index < GameConfig.BOX_COUNT):
+        if index is None or not (0 <= index < GameConfig.MEMORY_BOX_COUNT):
             return {"status": "invalid"}
 
         player = game_manager.get_memory_player(token)
@@ -74,7 +74,7 @@ class MemoryGameService:
                 
                 game_manager._state["click_count"] += 1
                 
-                if len(game_manager._state["memory_matched_positions"]) >= GameConfig.BOX_COUNT:
+                if len(game_manager._state["memory_matched_positions"]) >= GameConfig.MEMORY_BOX_COUNT:
                     game_manager._state["memory_game_over"] = True
                     player["won"] = True
                     return {

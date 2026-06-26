@@ -1,12 +1,13 @@
 import string
 
 class GameConfig:
-    BOX_COUNT = 10
+    BOX_COUNT = 200  # Regular game boxes
+    MEMORY_BOX_COUNT = 10  # Memory game boxes (5 pairs)
     MEMORY_EMOJIS = ["🍎", "🍌", "🍇", "🍓", "🍉", "🍒", "⭐", "💎", "🔥", "⚡", "🌙", "🎯"]
     MEMORY_REVEAL_MS = 2000
     MEMORY_MIN_SECONDS = 5
     PLAYER_TIMEOUT_MS = 100
-    DEFAULT_SERVER_CLOSED_LINK = "https://t.me/+AVntWccsRDRiYzA1"
+    DEFAULT_SERVER_CLOSED_LINK = ""
 
 INITIAL_GAME_STATE = {
     "title": "Fast Handed Yarn??",
@@ -44,7 +45,7 @@ INITIAL_GAME_STATE = {
     "memory_board": [],
     "memory_matched_positions": [],
     "memory_game_over": False,
-    "memory_player_states": {},  # token -> {lives, locked, won, selected}
+    "memory_player_state": {},  # anonymous memory player -> {lives, locked, won, selected}
 
     # Server Shutdown Redirect
     "server_closed": False,
