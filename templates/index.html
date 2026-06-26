@@ -112,6 +112,18 @@
         }
 
         .status-note { color: #aaa; font-size: .95rem; }
+        .page-watermark {
+            position: fixed;
+            right: 16px;
+            bottom: 14px;
+            z-index: 5;
+            font-size: 0.8rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.18);
+            pointer-events: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -128,6 +140,8 @@
 
         <div class="grid" id="box-grid"></div>
     </div>
+
+    <div class="page-watermark" aria-hidden="true">By Admin Sun</div>
 
     <div class="memory-overlay" id="memory-overlay">
         <div class="memory-card">
