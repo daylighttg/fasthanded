@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="tab-title">Fast Handed Yarn??</title>
+    <style>
+        body {
+            background: #0b0b0f;
+            color: #e0e0e6;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        .content { width: 100%; max-width: 900px; text-align: center; }
+        h1 { font-weight: 700; letter-spacing: 1px; margin: 0 0 10px; }
+        .announcement-ticker, .status-banner, .broadcast-banner {
+            background: #16161f;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 10px 0;
+        }
+        .broadcast-banner { display: none; color: #00e5ff; }
+        #timer { font-size: 2.2rem; font-weight: 700; margin: 12px 0; font-family: monospace; color: #ff416c; }
+        #live-player-count { display:none; margin-bottom: 12px; color: #4caf50; font-weight: 700; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(58px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .box {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            background: #16161f;
+            border: 1px solid #2a2a3a;
+            color: #cfd8dc;
+            font-weight: 700;
+            font-size: 1.35rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+        }
+        .box:hover { transform: translateY(-1px); border-color: #555; }
+        .box.clicked { opacity: 0.7; cursor: not-allowed; }
+        .box.revealed { background: #233; border-color: #66bb6a; color: #fff; }
+        .box.matched { background: #1b5e20; border-color: #a5d6a7; color: #fff; }
+        .box.locked { cursor: not-allowed; opacity: .45; }
+        .box.wrong-flash { animation: wrongFlash 0.45s ease; }
+        @keyframes wrongFlash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); background: #4a1d1d; }
+            100% { transform: scale(1); }
+        }
+
+        .memory-preview .box { background: #2e2a1f; border-color: #e0b84f; color: #fff; }
+        .memory-mode .box { background: #11131a; }
+        .memory-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.93);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            text-align: center;
+            padding: 20px;
+        }
+        .memory-overlay.visible { display: flex; }
+        .memory-card {
+            max-width: 520px;
+            width: 100%;
+            background: #11131a;
+            border: 1px solid #333;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 0 30px rgba(255,255,255,.08);
+        }
+        .memory-card h2 { margin-top: 0; }
+        .memory-card button, .memory-card a.button {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: none;
+            background: #ff416c;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .firework {
+            position: fixed;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            pointer-events: none;
+            z-index: 10000;
+            animation: boom 1s ease-out forwards;
+        }
+        @keyframes boom {
+            0% { transform: scale(.2); opacity: 1; }
+            100% { transform: scale(18); opacity: 0; }
+        }
+
+        .status-note { color: #aaa; font-size: .95rem; }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1 id="game-title">Fast Handed Yarn??</h1>
+
+        <div class="announcement-ticker" id="announcement-banner">Loading announcements...</div>
+        <div class="broadcast-banner" id="broadcast-banner">📢 <span id="broadcast-text"></span></div>
+        <div class="status-banner"><h2 id="status-title" style="margin:0; font-size:1.1rem;">Waiting for Host...</h2></div>
+
+        <div id="timer">00:00.000</div>
+        <div id="live-player-count">👆 <span id="player-click-num">0</span> players accessed the link</div>
+        <div class="status-note" id="memory-note"></div>
+
+        <div class="grid" id="box-grid"></div>
+    </div>
+
+    <div class="memory-overlay" id="memory-overlay">
+        <div class="memory-card">
+            <h2 id="memory-result-title">Memory Game</h2>
+            <p id="memory-result-text"></p>
+            <div id="memory-result-actions"></div>
+        </div>
+    </div>
+
+    <audio id="audio-start"  src="https://mp3tourl.com/audio/1781932682802-a430cd7e-e654-4343-95d9-03f82bec561e.m4a" loop></audio>
+    <audio id="audio-idle"   src="https://mp3tourl.com/audio/1781932654466-b533755e-08fb-437c-b3a1-8266f7b6d6c3.m4a" loop></audio>
+    <audio id="audio-heaven" src="https://mp3tourl.com/audio/1781959067695-20d1ddcd-824b-4e8d-a1ab-5c8262e83b2c.m4a" loop></audio>
+    <audio id="audio-ice"    src="https://mp3tourl.com/audio/1782108496429-2da1cd95-eb2c-49dc-ab0b-aebdbef31ceb.mp3" loop></audio>
+    <audio id="audio-fire"   src="https://mp3tourl.com/audio/1782108137798-8a64e07d-c47a-4a3c-8adc-a04c4f79fb5b.m4a" loop></audio>
+
+    <script>
+        const BOX_COUNT = 10;
+        const PLAYER_TOKEN_KEY = 'fastHandedMemoryToken';
+        const MEMORY_SELECTED_KEY = 'fastHandedMemorySelected';
+        const MEMORY_LOCKED_KEY = 'fastHandedMemoryLocked';
+
+        let gameState = {};
+        let currentAudio = null;
+        let currentStartTime = null;
+        let lastBroadcastMsg = "";
+        let typingTimeout = null;
+        let serverCloseHandled = false;
+
+        let holyInterval = null;
+        let currentHolyIndex = -1;
+        let localHolyActive = false;
+        let localIceActive = false;
+        let localFireActive = false;
+        let fireInterval = null;
+        let localMemoryActive = false;
+        let memoryFireworksShown = false;
+        let memoryPreviewShown = false;
+        let memoryWinnerShown = false;
+
+        function getPlayerToken() {
+            let t = localStorage.getItem(PLAYER_TOKEN_KEY);
+            if (!t) {
+                t = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                localStorage.setItem(PLAYER_TOKEN_KEY, t);
+            }
+            return t;
+        }
+        const PLAYER_TOKEN = getPlayerToken();
+
+        function getSelectedMemory() {
+            try { return JSON.parse(localStorage.getItem(MEMORY_SELECTED_KEY) || '[]'); }
+            catch { return []; }
+        }
+        function setSelectedMemory(arr) {
+            localStorage.setItem(MEMORY_SELECTED_KEY, JSON.stringify(arr));
+        }
+        function clearSelectedMemory() {
+            localStorage.removeItem(MEMORY_SELECTED_KEY);
+        }
+        function setLockedMemory(v) {
+            if (v) localStorage.setItem(MEMORY_LOCKED_KEY, '1');
+            else localStorage.removeItem(MEMORY_LOCKED_KEY);
+        }
+        function isLocallyLocked() {
+            return localStorage.getItem(MEMORY_LOCKED_KEY) === '1';
+        }
+
+        function playAudio(audioId) {
+            const t = document.getElementById(audioId);
+            if (currentAudio && currentAudio !== t) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            if (t && t.paused) {
+                t.play().catch(() => {});
+                currentAudio = t;
+            }
+        }
+        function stopAllAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+        }
+
+        function triggerTypingEffect(text) {
+            const banner = document.getElementById('broadcast-banner');
+            const tc = document.getElementById('broadcast-text');
+            banner.style.display = 'block';
+            tc.innerText = '';
+            clearTimeout(typingTimeout);
+            let i = 0;
+            (function type() {
+                if (i < text.length) {
+                    tc.innerText += text.charAt(i++);
+                    typingTimeout = setTimeout(type, 35);
+                }
+            })();
+        }
+
+        function showOverlay(title, text, buttonText, buttonHref) {
+            const overlay = document.getElementById('memory-overlay');
+            const titleEl = document.getElementById('memory-result-title');
+            const textEl = document.getElementById('memory-result-text');
+            const actions = document.getElementById('memory-result-actions');
+            titleEl.innerText = title;
+            textEl.innerText = text;
+            actions.innerHTML = '';
+            if (buttonHref) {
+                const a = document.createElement('a');
+                a.className = 'button';
+                a.href = buttonHref;
+                a.innerText = buttonText;
+                actions.appendChild(a);
+            }
+            overlay.classList.add('visible');
+        }
+
+        function hideOverlay() {
+            document.getElementById('memory-overlay').classList.remove('visible');
+        }
+
+        function createFireworks() {
+            if (memoryFireworksShown) return;
+            memoryFireworksShown = true;
+            const points = [
+                [window.innerWidth * 0.35, window.innerHeight * 0.35],
+                [window.innerWidth * 0.65, window.innerHeight * 0.28]
+            ];
+            points.forEach(([x, y]) => {
+                const fw = document.createElement('div');
+                fw.className = 'firework';
+                fw.style.left = x + 'px';
+                fw.style.top = y + 'px';
+                document.body.appendChild(fw);
+                setTimeout(() => fw.remove(), 1100);
+            });
+            setTimeout(() => { memoryFireworksShown = false; }, 1500);
+        }
+
+        function renderBoxes(state) {
+            const grid = document.getElementById('box-grid');
+            const playerSelected = getSelectedMemory();
+            const matched = new Set(state.memory_matched_positions || []);
+            const revealPhase = !!state.memory_event_active && Date.now() < (state.memory_reveal_until || 0);
+            const myLocked = state.my_memory_player ? state.my_memory_player.locked : false;
+            const myWon = state.my_memory_player ? state.my_memory_player.won : false;
+
+            grid.classList.toggle('memory-preview', revealPhase);
+            grid.classList.toggle('memory-mode', !!state.memory_event_active);
+
+            let html = '';
+            for (let i = 0; i < BOX_COUNT; i++) {
+                const isMatched = matched.has(i);
+                const isSelected = playerSelected.includes(i);
+                let label = String(i + 1);
+
+                if (state.memory_event_active) {
+                    if (revealPhase) label = state.memory_board[i] || '❓';
+                    else if (isMatched) label = state.memory_board[i] || '❓';
+                    else if (isSelected) label = state.memory_board[i] || '❓';
+                    else label = '❓';
+                }
+                html += `<div class="box ${isMatched ? 'matched' : ''} ${isSelected ? 'revealed' : ''} ${myLocked || myWon ? 'locked' : ''}" data-idx="${i}" onclick="checkBox(${i}, this)">${label}</div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderSelectedLabels(state) {
+            const note = document.getElementById('memory-note');
+            if (!state.memory_event_active) {
+                note.innerText = '';
+                return;
+            }
+            const my = state.my_memory_player || { lives: 0, locked: false, won: false };
+            if (my.won) {
+                note.innerText = 'You already won this memory round.';
+            } else if (my.locked) {
+                note.innerText = 'You are locked out for this round.';
+            } else {
+                note.innerText = `Lives left: ${my.lives}`;
+            }
+        }
+
+        function resetForNewState(state) {
+            if (state.start_time !== currentStartTime) {
+                currentStartTime = state.start_time;
+                clearSelectedMemory();
+                localStorage.removeItem(MEMORY_LOCKED_KEY);
+                document.getElementById('memory-overlay').classList.remove('visible');
+                memoryWinnerShown = false;
+                document.querySelectorAll('.box').forEach(box => box.classList.remove('clicked','revealed','matched','locked','wrong-flash'));
+            }
+        }
+
+        async function syncState() {
+            try {
+                const response = await fetch('/api/state?token=' + encodeURIComponent(PLAYER_TOKEN));
+                const data = await response.json();
+                gameState = data;
+                const body = document.body;
+                const statusTitle = document.getElementById('status-title');
+
+                resetForNewState(data);
+
+                if (data.global_message && data.global_message !== lastBroadcastMsg) {
+                    lastBroadcastMsg = data.global_message;
+                    triggerTypingEffect(data.global_message);
+                } else if (!data.global_message) {
+                    document.getElementById('broadcast-banner').style.display = 'none';
+                    lastBroadcastMsg = "";
+                }
+
+                document.getElementById('tab-title').innerText = data.title;
+                document.getElementById('game-title').innerText = data.title;
+                document.getElementById('announcement-banner').innerText = data.announcement;
+
+                if (data.server_closed && !serverCloseHandled) {
+                    serverCloseHandled = true;
+                    stopAllAudio();
+                    showOverlay('Server Closed', 'You will be redirected now.', 'Continue', data.server_closed_link);
+                    return;
+                }
+
+                const pcEl = document.getElementById('live-player-count');
+                const pcNum = document.getElementById('player-click-num');
+                if (data.active || data.revealed || data.ice_event_active || data.fire_event_active || data.holy_event_active || data.memory_event_active) {
+                    pcEl.style.display = 'block';
+                    pcNum.innerText = data.click_count;
+                } else {
+                    pcEl.style.display = 'none';
+                }
+
+                if (data.memory_event_active) {
+                    body.className = 'memory-mode';
+                    stopHolyBoxJumping(); localHolyActive = false;
+                    stopFireExplosions(); localFireActive = false;
+                    localIceActive = false;
+                    playAudio('audio-start');
+
+                    if (!localMemoryActive) {
+                        localMemoryActive = true;
+                    }
+
+                    if (Date.now() < (data.memory_reveal_until || 0)) {
+                        statusTitle.innerText = '🧠 MEMORY PREVIEW: Memorize the twin emojis!';
+                    } else {
+                        statusTitle.innerText = '🧠 MEMORY GAME: Find every twin before time runs out.';
+                    }
+
+                    if (data.memory_game_over) {
+                        if (data.memory_winner_found) {
+                            stopAllAudio();
+                        }
+                    }
+
+                    if (data.my_memory_player && data.my_memory_player.locked) {
+                        setLockedMemory(true);
+                    }
+                    renderBoxes(data);
+                    renderSelectedLabels(data);
+
+                    if (data.my_memory_player && data.my_memory_player.won && !memoryWinnerShown) {
+                        memoryWinnerShown = true;
+                        createFireworks();
+                        showOverlay(
+                            '🎉 You won!',
+                            'Congratulations! The memory board is complete.',
+                            'Open Winner Link',
+                            data.memory_winner_link || data.target_link || '#'
+                        );
+                    } else if (data.my_memory_player && data.my_memory_player.locked) {
+                        showOverlay(
+                            'Locked Out',
+                            'You lost this round, so this device cannot play again until a new memory event starts.',
+                            '',
+                            ''
+                        );
+                    } else {
+                        hideOverlay();
+                    }
+                    return;
+                } else {
+                    localMemoryActive = false;
+                    clearSelectedMemory();
+                    setLockedMemory(false);
+                    hideOverlay();
+                }
+
+                if (data.holy_event_active) {
+                    body.className = 'holy-mode';
+                    stopFireExplosions(); localFireActive = false;
+                    localIceActive = false;
+                    playAudio('audio-heaven');
+                    if (!localHolyActive) { localHolyActive = true; }
+                    statusTitle.innerText = '✨ CELESTIAL EVENT ACTIVE ✨';
+                } else if (data.ice_event_active) {
+                    body.className = 'ice-mode';
+                    stopHolyBoxJumping(); localHolyActive = false;
+                    stopFireExplosions(); localFireActive = false;
+                    playAudio('audio-ice');
+                    statusTitle.innerText = '❄️ ICE EVENT ACTIVE ❄️';
+                } else if (data.fire_event_active) {
+                    body.className = 'fire-mode';
+                    stopHolyBoxJumping(); localHolyActive = false;
+                    localIceActive = false;
+                    playAudio('audio-fire');
+                    if (!localFireActive) { localFireActive = true; startFireExplosions(); }
+                    statusTitle.innerText = '🔥 FIRE EVENT ACTIVE 🔥';
+                } else {
+                    if (localHolyActive) { localHolyActive = false; stopHolyBoxJumping(); }
+                    if (localFireActive) { localFireActive = false; stopFireExplosions(); }
+                    if (!data.active && !data.revealed) {
+                        statusTitle.innerText = 'Game is Ready. Awaiting Initialization.';
+                        body.className = '';
+                        playAudio('audio-idle');
+                    } else if (data.active && !data.revealed) {
+                        body.className = '';
+                        playAudio('audio-start');
+                        statusTitle.innerText = 'Find the Direct Link!';
+                    } else if (data.revealed) {
+                        body.className = '';
+                        stopAllAudio();
+                        statusTitle.innerHTML = `Game Over!<br><span style="color:#4caf50;">Total Successful Direct Link Accesses: ${data.click_count}</span>`;
+                    }
+                }
+
+                renderBoxes(data);
+                renderSelectedLabels(data);
+            } catch (err) {
+                console.error('Sync error:', err);
+            }
+        }
+
+        function startHolyBoxJumping(speedMs) {
+            if (holyInterval) clearInterval(holyInterval);
+            const boxes = document.querySelectorAll('.box');
+            holyInterval = setInterval(() => {
+                if (currentHolyIndex !== -1 && boxes[currentHolyIndex]) boxes[currentHolyIndex].classList.remove('revealed');
+                let ni;
+                do { ni = Math.floor(Math.random() * BOX_COUNT); } while (ni === currentHolyIndex);
+                currentHolyIndex = ni;
+                if (boxes[currentHolyIndex]) boxes[currentHolyIndex].classList.add('revealed');
+            }, speedMs);
+        }
+        function stopHolyBoxJumping() {
+            if (holyInterval) clearInterval(holyInterval);
+            const g = document.querySelector('.box.revealed');
+            if (g) g.classList.remove('revealed');
+            currentHolyIndex = -1;
+        }
+
+        function startFireExplosions() {
+            if (fireInterval) clearInterval(fireInterval);
+            fireInterval = setInterval(() => {
+                const avail = document.querySelectorAll('.box:not(.matched)');
+                if (avail.length > 0) {
+                    const t = avail[Math.floor(Math.random() * avail.length)];
+                    t.classList.add('wrong-flash');
+                    setTimeout(() => t.classList.remove('wrong-flash'), 450);
+                }
+            }, 2000);
+        }
+        function stopFireExplosions() {
+            if (fireInterval) clearInterval(fireInterval);
+            document.querySelectorAll('.box').forEach(b => b.classList.remove('wrong-flash'));
+        }
+
+        async function checkBox(index, element) {
+            if (!gameState) return;
+            if (gameState.revealed || isLocallyLocked()) return;
+            if (element.classList.contains('matched')) return;
+
+            if (gameState.memory_event_active) {
+                const my = gameState.my_memory_player || { lives: 0, locked: false, won: false };
+                if (my.locked || my.won) return;
+
+                let selected = getSelectedMemory();
+                if (selected.includes(index)) return;
+
+                selected.push(index);
+                setSelectedMemory(selected);
+                renderBoxes(gameState);
+
+                const response = await fetch('/api/memory/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index, token: PLAYER_TOKEN })
+                });
+                const result = await response.json();
+
+                if (result.status === 'first') {
+                    return;
+                }
+
+                if (result.status === 'match') {
+                    clearSelectedMemory();
+                    await syncState();
+                    if (result.complete) {
+                        createFireworks();
+                    }
+                    return;
+                }
+
+                if (result.status === 'wrong') {
+                    element.classList.add('wrong-flash');
+                    setTimeout(() => element.classList.remove('wrong-flash'), 450);
+                    setSelectedMemory([]);
+                    await syncState();
+                    return;
+                }
+
+                if (result.status === 'lost') {
+                    setSelectedMemory([]);
+                    setLockedMemory(true);
+                    await syncState();
+                    return;
+                }
+
+                return;
+            }
+
+            if (gameState.holy_event_active) {
+                if (index === currentHolyIndex) {
+                    fetch('/api/holy/click', { method: 'POST' }).catch(() => {});
+                    window.location.href = gameState.holy_link;
+                }
+                return;
+            }
+
+            if (!gameState.active && !gameState.ice_event_active && !gameState.fire_event_active) return;
+
+            element.classList.add('clicked');
+            const response = await fetch('/api/click', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({index: index})
+            });
+            const result = await response.json();
+            if (result.status === 'correct') {
+                window.location.href = result.link;
+            } else {
+                element.classList.remove('clicked');
+            }
+        }
+
+        function runHighResTimer() {
+            const timerEl = document.getElementById('timer');
+            if (gameState.memory_event_active && gameState.memory_start_time) {
+                const elapsed = Date.now() - gameState.memory_start_time;
+                const total = (gameState.memory_total_seconds || 30) * 1000;
+                const remaining = Math.max(0, total - elapsed);
+
+                if (Date.now() < (gameState.memory_reveal_until || 0)) {
+                    timerEl.innerText = '🧠 PREVIEW 2s';
+                } else {
+                    const mins = String(Math.floor(remaining / 60000)).padStart(2, '0');
+                    const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+                    const ms = String(remaining % 1000).padStart(3, '0');
+                    timerEl.innerText = `${mins}:${secs}.${ms}`;
+                }
+
+                if (remaining <= 0 && !gameState.memory_game_over) {
+                    timerEl.innerText = '00:00.000';
+                }
+            } else if (gameState.holy_event_active) {
+                timerEl.innerText = '✨ HOLY TIME ✨';
+            } else if (gameState.ice_event_active) {
+                timerEl.innerText = '❄️ FROZEN TIME ❄️';
+            } else if (gameState.fire_event_active) {
+                timerEl.innerText = '🔥 BURN TIME 🔥';
+            } else if (gameState.active && !gameState.revealed && gameState.start_time) {
+                let elapsed = Date.now() - gameState.start_time;
+                let remaining = (gameState.total_seconds * 1000) - elapsed;
+                if (remaining <= 0) {
+                    timerEl.innerText = '00:00.000';
+                } else {
+                    let mins = String(Math.floor(remaining / 60000)).padStart(2,'0');
+                    let secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2,'0');
+                    let ms = String(remaining % 1000).padStart(3,'0');
+                    timerEl.innerText = `${mins}:${secs}.${ms}`;
+                }
+            } else {
+                timerEl.innerText = '00:00.000';
+            }
+            requestAnimationFrame(runHighResTimer);
+        }
+
+        setInterval(syncState, 1000);
+        syncState();
+        requestAnimationFrame(runHighResTimer);
+        window.addEventListener('click', () => { syncState(); }, { once: true });
+    </script>
+</body>
+</html>

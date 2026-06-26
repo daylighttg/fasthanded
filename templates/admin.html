@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body { background:#0b0b0f; color:#e0e0e6; font-family:Arial,sans-serif; padding:30px; display:flex; justify-content:center; }
+        .panel { background:#16161f; border:1px solid #2a2a3a; padding:25px; border-radius:12px; max-width:560px; width:100%; }
+        h2 { margin-top:0; color:#fff; border-bottom:1px solid #2a2a3a; padding-bottom:10px; }
+        .form-group { margin-bottom:15px; }
+        label { display:block; margin-bottom:5px; color:#aaa; font-size:0.9rem; }
+        input[type="text"], input[type="number"] { width:100%; padding:10px; background:#0b0b0f; border:1px solid #3a3a4a; border-radius:5px; color:#fff; box-sizing:border-box; }
+        button { background:#ff416c; color:white; border:none; padding:12px 20px; border-radius:5px; cursor:pointer; font-weight:bold; width:100%; margin-top:10px; }
+        button:hover { opacity:0.88; }
+        .event-section { border:1px solid #3a3a4a; padding:15px; border-radius:10px; margin-top:20px; }
+        .stats { background:#0b0b0f; padding:15px; border-radius:5px; margin-top:20px; border-left:4px solid #ff416c; }
+        .counter { font-size:2rem; font-weight:bold; color:#4caf50; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>⚡ Admin Management Panel</h2>
+
+        <form action="/api/configure" method="POST">
+            <div class="form-group"><label>Game Title</label><input type="text" name="title" value="{{ state.title }}" required></div>
+            <div class="form-group"><label>Global Announcement Message</label><input type="text" name="announcement" value="{{ state.announcement }}"></div>
+            <div class="form-group"><label>Direct Target Link</label><input type="text" name="target_link" placeholder="https://example.com" value="{{ state.target_link }}"></div>
+            <div class="form-group"><label>Number of Winning Boxes (Out of 10)</label><input type="number" name="num_links" min="1" max="10" value="{{ state.winning_boxes|length if state.winning_boxes|length > 0 else 5 }}"></div>
+            <div class="form-group"><label>Game Duration (Seconds)</label><input type="number" name="duration" min="5" value="{{ state.total_seconds }}"></div>
+            <button type="submit">🚀 Deploy & Launch Regular Game</button>
+        </form>
+
+        <div class="event-section" style="border-color:#ffd700; background:rgba(212,175,55,0.02);">
+            <h3 style="margin-top:0; color:#ffd700;">✨ Celestial Holy Event</h3>
+            <form action="/api/holy/trigger" method="POST">
+                <div class="form-group"><label style="color:#fff176;">Holy Target Link</label><input type="text" name="holy_link" placeholder="https://holy-victory-url.com" value="{{ state.holy_link }}" required></div>
+                <div class="form-group"><label style="color:#fff176;">Box Teleport Velocity (ms)</label><input type="number" name="holy_speed" min="20" max="1000" value="{{ state.holy_speed }}"></div>
+                <button type="submit" style="background:linear-gradient(45deg,#fbc02d,#f57f17);">Activate Holy Event</button>
+            </form>
+            {% if state.holy_event_active %}
+            <form action="/api/holy/stop" method="POST" style="margin-top:8px;">
+                <button type="submit" style="background:#455a64;">Terminate Holy Event</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="event-section" style="border-color:#00d2ff; background:rgba(0,210,255,0.02);">
+            <h3 style="margin-top:0; color:#00d2ff;">❄️ Ice Event</h3>
+            <form action="/api/ice/trigger" method="POST">
+                <div class="form-group"><label style="color:#b3e5fc;">Ice Target Link</label><input type="text" name="ice_link" placeholder="https://ice-victory-url.com" value="{{ state.ice_link }}" required></div>
+                <button type="submit" style="background:linear-gradient(45deg,#00d2ff,#0086ad);">Deploy Ice Freeze Arena</button>
+            </form>
+            {% if state.ice_event_active %}
+            <form action="/api/ice/stop" method="POST" style="margin-top:8px;">
+                <button type="submit" style="background:#455a64;">Terminate Ice Event</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="event-section" style="border-color:#ff5722; background:rgba(255,87,34,0.02);">
+            <h3 style="margin-top:0; color:#ff5722;">🔥 Fire Event</h3>
+            <form action="/api/fire/trigger" method="POST">
+                <div class="form-group"><label style="color:#ffcc80;">Fire Target Link</label><input type="text" name="fire_link" placeholder="https://fire-victory-url.com" value="{{ state.fire_link }}" required></div>
+                <button type="submit" style="background:linear-gradient(45deg,#ff5722,#e64a19);">Deploy Volcanic Fire Arena</button>
+            </form>
+            {% if state.fire_event_active %}
+            <form action="/api/fire/stop" method="POST" style="margin-top:8px;">
+                <button type="submit" style="background:#455a64;">Terminate Fire Event</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="event-section" style="border-color:#8e44ad; background:rgba(142,68,173,0.03);">
+            <h3 style="margin-top:0; color:#d7bde2;">🧠 Memory Game</h3>
+            <p style="color:#aaa; font-size:0.85rem; margin-top:0;">
+                10 boxes, 5 twin emoji pairs, 2-second preview, per-player lives, and a lockout when they lose.
+            </p>
+            <form action="/api/memory/trigger" method="POST">
+                <div class="form-group"><label style="color:#d7bde2;">Memory Target Link</label><input type="text" name="memory_target_link" placeholder="https://memory-prize-url.com" value="{{ state.memory_target_link }}" required></div>
+                <div class="form-group"><label style="color:#d7bde2;">Winner Link / Direct Button Link</label><input type="text" name="memory_winner_link" placeholder="https://winner-link.com" value="{{ state.memory_winner_link }}" required></div>
+                <div class="form-group"><label style="color:#d7bde2;">Timer (Seconds)</label><input type="number" name="memory_total_seconds" min="5" value="{{ state.memory_total_seconds }}"></div>
+                <div class="form-group"><label style="color:#d7bde2;">Lives</label><input type="number" name="memory_lives_default" min="1" value="{{ state.memory_lives_default }}"></div>
+                <button type="submit" style="background:linear-gradient(45deg,#8e44ad,#5b2c6f);">Start Memory Game</button>
+            </form>
+            {% if state.memory_event_active %}
+            <div style="background:#2d004f; color:#e8b4f8; padding:10px; border-radius:6px; margin:10px 0; font-size:0.85rem; border:1px solid #9b59b6;">
+                ⏳ Memory event is live — preview active for 2 seconds after launch.
+            </div>
+            <form action="/api/memory/stop" method="POST" style="margin-top:6px;">
+                <button type="submit" style="background:#455a64;">Stop Memory Game</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <form action="/api/broadcast" method="POST" style="margin-top:15px; border-top:1px dashed #2a2a3a; padding-top:15px;">
+            <div class="form-group"><label style="color:#00bcd4;">Instant Live Message Broadcast</label><input type="text" name="global_message" placeholder="Type text alert here..." required></div>
+            <button type="submit" style="background:#0097a7;">📢 Broadcast Typing Alert</button>
+        </form>
+
+        <form action="/api/reset" method="POST" style="margin-top:10px;">
+            <button type="submit" style="background:#333;">🔄 Reset Arena State</button>
+        </form>
+
+        <div class="event-section" style="border-color:#b71c1c; background:rgba(183,28,28,0.05); margin-top:20px;">
+            <h3 style="margin-top:0; color:#ef5350;">⚠️ Server Shutdown Control</h3>
+            {% if state.server_closed %}
+            <div style="background:#1b5e20; color:#a5d6a7; padding:10px; border-radius:5px; margin-bottom:10px; font-weight:bold;">🔴 SERVER IS CLOSED — Players are being redirected</div>
+            <form action="/api/reopen" method="POST">
+                <button type="submit" style="background:#1b5e20;">✅ Reopen Server</button>
+            </form>
+            {% else %}
+            <form action="/api/shutdown" method="POST">
+                <button type="submit" style="background:#b71c1c;">🔴 Close Server & Redirect All Players</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="stats">
+            <label>Live Click Score Tracker</label>
+            <div class="counter" id="live-counter">0</div>
+        </div>
+    </div>
+
+    <script>
+        setInterval(async () => {
+            let r = await fetch('/api/state');
+            let d = await r.json();
+            document.getElementById('live-counter').innerText = d.click_count;
+        }, 1000);
+    </script>
+</body>
+</html>
