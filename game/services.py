@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from config import GameConfig
 from game.manager import game_manager
 
@@ -34,7 +34,7 @@ class MemoryGameService:
         return board
 
     @staticmethod
-    def handle_click(index: int, token: str) -> Dict[str, Any]:
+    def handle_click(index: int) -> Dict[str, Any]:
         game_manager.check_memory_timeout(now_ms)
         state = game_manager.get_state()
         
@@ -44,7 +44,7 @@ class MemoryGameService:
         if index is None or not (0 <= index < GameConfig.MEMORY_BOX_COUNT):
             return {"status": "invalid"}
 
-        player = game_manager.get_memory_player(token)
+        player = game_manager.get_memory_player()
         if player["locked"]:
             return {"status": "locked"}
         if player["won"]:

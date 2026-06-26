@@ -145,7 +145,6 @@
 
     <script>
         const BOX_COUNT = 10;
-        const PLAYER_TOKEN_KEY = 'fastHandedMemoryToken';
         const MEMORY_SELECTED_KEY = 'fastHandedMemorySelected';
         const MEMORY_LOCKED_KEY = 'fastHandedMemoryLocked';
 
@@ -166,16 +165,6 @@
         let memoryFireworksShown = false;
         let memoryPreviewShown = false;
         let memoryWinnerShown = false;
-
-        function getPlayerToken() {
-            let t = localStorage.getItem(PLAYER_TOKEN_KEY);
-            if (!t) {
-                t = Math.random().toString(36).slice(2) + Date.now().toString(36);
-                localStorage.setItem(PLAYER_TOKEN_KEY, t);
-            }
-            return t;
-        }
-        const PLAYER_TOKEN = getPlayerToken();
 
         function getSelectedMemory() {
             try { return JSON.parse(localStorage.getItem(MEMORY_SELECTED_KEY) || '[]'); }
@@ -326,7 +315,7 @@
 
         async function syncState() {
             try {
-                const response = await fetch('/api/state?token=' + encodeURIComponent(PLAYER_TOKEN));
+                const response = await fetch('/api/state');
                 const data = await response.json();
                 gameState = data;
                 const body = document.body;
@@ -516,9 +505,9 @@
                 const response = await fetch('/api/memory/click', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index, token: PLAYER_TOKEN })
-                });
-                const result = await response.json();
+                    body: JSON.stringify({ index })
+                 });
+                 const result = await response.json();
 
                 if (result.status === 'first') {
                     return;

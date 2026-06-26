@@ -1,8 +1,6 @@
 import threading
-import time
-import random
-from typing import Dict, Any, List, Optional
-from config import GameConfig, INITIAL_GAME_STATE
+from typing import Dict, Any
+from config import INITIAL_GAME_STATE
 
 class GameStateManager:
     def __init__(self):
@@ -38,21 +36,27 @@ class GameStateManager:
         with self._lock:
             self._state["click_count"] += 1
 
-    def get_memory_player(self, token: str) -> Dict[str, Any]:
+    def get_memory_player(self) -> Dict[str, Any]:
         with self._lock:
-            players = self._state.setdefault("memory_player_states", {})
-            if token not in players:
-                players[token] = {
+            player = self._state.get("memory_player_state")
+            if not isinstance(player, dict) or not player:
+                player = {
                     "lives": self._state["memory_lives_default"],
                     "locked": False,
                     "won": False,
                     "selected": []
                 }
-            return players[token]
+                self._state["memory_player_state"] = player
+            return player
 
     def reset_memory_players(self):
         with self._lock:
-            self._state["memory_player_states"] = {}
+            self._state["memory_player_state"] = {
+                "lives": self._state["memory_lives_default"],
+                "locked": False,
+                "won": False,
+                "selected": []
+            }
 
     def check_expiration(self, now_ms_func):
         with self._lock:
@@ -77,5 +81,6 @@ class GameStateManager:
                 elapsed = now_ms_func() - s["memory_start_time"]
                 if elapsed >= (s["memory_total_seconds"] * 1000):
                     s["memory_game_over"] = True
+
 
 game_manager = GameStateManager()

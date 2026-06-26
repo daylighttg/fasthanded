@@ -1,23 +1,23 @@
+from pathlib import Path
 import random
-import time
-import string
-from typing import Dict, Any, List, Optional
 from flask import Flask, render_template, jsonify, request, redirect
 from config import GameConfig, INITIAL_GAME_STATE
 from game.manager import game_manager
 from game.services import GameService, MemoryGameService, now_ms
 
-app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+app = Flask(
+    __name__,
+    root_path=str(BASE_DIR),
+    template_folder="templates",
+)
 
-def extract_token() -> str:
-    """Extracts player token from various request sources."""
-    token = request.args.get("token") or request.headers.get("X-Player-Token")
-    if not token:
-        data = request.get_json(silent=True) or {}
-        token = data.get("token")
-    if not token:
-        token = request.form.get("token")
-    return token or ""
+
+def parse_index(payload):
+    try:
+        return int(payload.get("index"))
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 @app.route("/")
@@ -35,22 +35,16 @@ def admin_panel() -> str:
 @app.route("/api/state", methods=["GET"])
 def get_state():
     game_manager.check_expiration(now_ms)
-    token = extract_token()
     state = game_manager.get_state()
-    player = game_manager.get_memory_player(token) if token else {
+    player = game_manager.get_memory_player() if state["memory_event_active"] else {
         "lives": state["memory_lives_default"],
         "locked": False,
         "won": False,
         "selected": []
     }
     
-    # Enrich state with player-specific info
     response_state = state.copy()
     response_state["my_memory_player"] = player
-    
-    # Remove potentially sensitive or large internal state if needed
-    # (Leaving it for now as it matches previous behavior)
-    
     return jsonify(response_state)
 
 
@@ -204,10 +198,10 @@ def stop_memory():
 @app.route("/api/memory/click", methods=["POST"])
 def memory_click():
     data = request.get_json() or {}
-    index = data.get("index")
-    token = data.get("token") or extract_token()
-    
-    result = MemoryGameService.handle_click(index, token)
+    index = parse_index(data)
+    if index is None:
+        return jsonify({"status": "invalid"})
+    result = MemoryGameService.handle_click(index)
     return jsonify(result)
 
 
@@ -239,16 +233,11 @@ def reopen_server():
 @app.route("/api/click", methods=["POST"])
 def handle_click():
     data = request.get_json() or {}
-    index = data.get("index")
+    index = parse_index(data)
+    if index is None:
+        return jsonify({"status": "invalid"})
     result = GameService.handle_click(index)
     return jsonify(result)
-
-
-@app.route("/api/memory/heartbeat", methods=["GET"])
-def memory_heartbeat():
-    token = extract_token()
-    player = game_manager.get_memory_player(token)
-    return jsonify({"status": "ok", "player": player})
 
 
 @app.before_request
